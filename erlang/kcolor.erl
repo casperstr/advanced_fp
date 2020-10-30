@@ -2,11 +2,11 @@
 
 -export([addEdge/3,
          addNode/2,
-         colorGraph/1,
+         kcolor/2,
          getNodes/1,
          isSafeColor/3]).
 
-kcolor(graph) -> true.
+
 
 isSafeColor(Neighbors, NodesWithColor, Color) ->
     NeighborsColors = lists:filtermap(fun ({L, C}) ->
@@ -19,22 +19,23 @@ isSafeColor(Neighbors, NodesWithColor, Color) ->
                                       NodesWithColor),
     lists:member(Color, NeighborsColors) == false.
 
-colorGraph(Graph) -> colorGraph(Graph, [], 0).
+kcolor(Graph,MaxColors) -> kcolor(Graph, [],MaxColors, 0).
 
-colorGraph([], NodesWithColor, _) -> NodesWithColor;
-colorGraph([Head | Tail], NodesWithColor,
-           CurrentColor) ->
-    {Label, Neighbors, _} = Head,
+kcolor(_, _,MaxColors, CurrentColor) when CurrentColor > MaxColors -> false;
+kcolor([], NodesWithColor,_, _) -> NodesWithColor;
+kcolor([Head | Tail], NodesWithColor,MaxColors, CurrentColor) ->
+
+    {Label, Neighbors} = Head,
     IsSafe = isSafeColor(Neighbors,
                          NodesWithColor,
                          CurrentColor),
     if IsSafe == true ->
-           colorGraph(Tail,
-                      [{Label, CurrentColor}] ++ NodesWithColor,
+           kcolor(Tail,
+                      [{Label, CurrentColor}] ++ NodesWithColor,MaxColors,
                       0);
        IsSafe == false ->
-           colorGraph([Head | Tail],
-                      NodesWithColor,
+           kcolor([Head | Tail],
+                      NodesWithColor,MaxColors,
                       CurrentColor + 1)
     end.
 
