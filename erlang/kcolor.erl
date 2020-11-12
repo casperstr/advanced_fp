@@ -6,52 +6,59 @@
 
 -export([addEdge/3,
          addNode/2,
+         adjecent_complete_connected_graph_color/0,
          completeConnectedGraph/1,
          createGraph/0,
          getAdjecentNodes/2,
          getNodes/1,
          graphFromNodes/1,
-         isSafeColor/3,
          kcolor/2]).
 
-isSafeColor(Neighbors, NodesWithColor, Color) ->
-    NeighborsColors = lists:filtermap(fun ({L, C}) ->
-                                              IsMember = lists:member(L,
-                                                                      Neighbors),
-                                              if IsMember == true -> {true, C};
-                                                 IsMember == false -> false
-                                              end
-                                      end,
-                                      NodesWithColor),
-    lists:member(Color, NeighborsColors) == false.
+isSafe(Graph, NodeIndex, Colors, Color) ->
+    {_, AdjecentLabels} = lists:nth(NodeIndex, Graph),
+    maps:size(maps:filter(fun (Key, Val) ->
+                                  (Val == Color) and
+                                      lists:member(Key, AdjecentLabels)
+                          end,
+                          Colors))
+        == 0.
 
 kcolor(Graph, MaxColors) ->
-    kcolor(Graph, [], MaxColors, 0).
+    ColorMap = kcolor(Graph, 1, #{}, 0, MaxColors),
+    if ColorMap == false -> false;
+       true ->
+           lists:map(fun ({Index, {Label, _}}) ->
+                             {Label, [$a + maps:get(Index, ColorMap)]}
+                     end,
+                     lists:zip(lists:seq(1, length(Graph)), Graph))
+    end.
 
-kcolor(_, _, MaxColors, CurrentColor)
-    when CurrentColor > MaxColors ->
+kcolor(_, _, _, CurrentColor, MaxColors)
+    when CurrentColor + 1 > MaxColors ->
     false;
-kcolor([], NodesWithColor, _, _) ->
-    lists:reverse(lists:map(fun ({Label, Color}) ->
-                                    {Label, [Color + $a]}
-                            end,
-                            NodesWithColor));
-kcolor([Head | Tail], NodesWithColor, MaxColors,
-       CurrentColor) ->
-    {Label, Neighbors} = Head,
-    IsSafe = isSafeColor(Neighbors,
-                         NodesWithColor,
-                         CurrentColor),
+kcolor(Graph, _, Colors, _, _)
+    when map_size(Colors) == length(Graph) ->
+    Colors;
+kcolor(Graph, NodeIndex, Colors, CurrentColor,
+       MaxColors) ->
+    IsSafe = isSafe(Graph, NodeIndex, Colors, CurrentColor),
+
     if IsSafe == true ->
-           kcolor(Tail,
-                  [{Label, CurrentColor}] ++ NodesWithColor,
-                  MaxColors,
-                  0);
+           NewColors = maps:put(NodeIndex, CurrentColor, Colors),
+           NextColor = kcolor(Graph,
+                              NodeIndex + 1,
+                              NewColors,
+                              0,
+                              MaxColors),
+           if NextColor == false -> false;
+              true -> NextColor
+           end;
        IsSafe == false ->
-           kcolor([Head | Tail],
-                  NodesWithColor,
-                  MaxColors,
-                  CurrentColor + 1)
+           kcolor(Graph,
+                  NodeIndex,
+                  Colors,
+                  CurrentColor + 1,
+                  MaxColors)
     end.
 
 createGraph() -> [].
@@ -132,7 +139,30 @@ adjecent_complete_prop() ->
                        end,
                        L))).
 
+kcolor_result_labels_equal_arg_labels_prop() ->
+    ?FORALL(L, (list_no_dupls(pos_integer())),
+            (lists:sort(lists:map(fun ({Label, _}) -> Label end,
+                                  kcolor(completeConnectedGraph(graphFromNodes(L)),
+                                         length(L) + 1)))
+                 =:= lists:sort(L))).
+
+kcolor_result_labels_equal_arg_labels_test() ->
+    ?assertEqual(true,
+                 (proper:quickcheck(kcolor_result_labels_equal_arg_labels_prop(),
+                                    [{to_file, user}]))).
+
 adjecent_complete_prop_test() ->
     ?assertEqual(true,
                  (proper:quickcheck(adjecent_complete_prop(),
+                                    [{to_file, user}]))).
+
+adjecent_complete_connected_graph_color() ->
+    ?FORALL(L, (list_no_dupls(pos_integer())),
+            (length(kcolor(completeConnectedGraph(graphFromNodes(L)),
+                           length(L) + 1))
+                 == length(L))).
+
+adjecent_complete_connected_graph_color_test() ->
+    ?assertEqual(true,
+                 (proper:quickcheck(adjecent_complete_connected_graph_color(),
                                     [{to_file, user}]))).
