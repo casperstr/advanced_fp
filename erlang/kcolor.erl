@@ -23,8 +23,26 @@ isSafe(Graph, NodeIndex, Colors, Color) ->
                           Colors))
         == 0.
 
-kcolor(Graph, MaxColors) ->
-    ColorMap = kcolor(Graph, 1, #{}, 0, MaxColors),
+%PARSE INPUT AND BUILD GRAPH
+kcolor(Inp, MaxColors) ->
+    Graph = lists:foldr(fun ({Label, _}, Acc) ->
+                                addNode(Acc, Label)
+                        end,
+                        createGraph(),
+                        Inp),
+    GraphWithEdges = lists:foldr(fun ({Label, Neighbors},
+                                      Acc) ->
+                                         lists:foldr(fun (N, A) ->
+                                                             addEdge(A,
+                                                                     Label,
+                                                                     N)
+                                                     end,
+                                                     Acc,
+                                                     Neighbors)
+                                 end,
+                                 Graph,
+                                 Inp),
+    ColorMap = kcolor(GraphWithEdges, 1, #{}, 0, MaxColors),
     if ColorMap == false -> false;
        true ->
            lists:map(fun ({Index, {Label, _}}) ->
@@ -65,6 +83,14 @@ createGraph() -> [].
 
 addNode(Graph, Label) -> Graph ++ [{Label, []}].
 
+%% Taken from slides
+remove_duplicates([]) -> [];
+remove_duplicates([A | T]) ->
+    case lists:member(A, T) of
+        true -> remove_duplicates(T);
+        false -> [A | remove_duplicates(T)]
+    end.
+
 getAdjecentNodes([Node | Tail], LabelA) ->
     case Node of
         {Label, Neighbors} when Label == LabelA -> Neighbors;
@@ -74,9 +100,9 @@ getAdjecentNodes([Node | Tail], LabelA) ->
 addEdgeAux(Node, LabelA, LabelB) ->
     case Node of
         {Label, Neighbors} when Label == LabelA ->
-            {Label, Neighbors ++ [LabelB]};
+            {Label, remove_duplicates(Neighbors ++ [LabelB])};
         {Label, Neighbors} when Label == LabelB ->
-            {Label, Neighbors ++ [LabelA]};
+            {Label, remove_duplicates(Neighbors ++ [LabelA])};
         _Else -> Node
     end.
 
@@ -89,14 +115,6 @@ getNodes(Graph) ->
     lists:map(fun ({Label, _}) -> Label end, Graph).
 
 %% TESTS
-
-%% remove duplicates taken from slides
-remove_duplicates([]) -> [];
-remove_duplicates([A | T]) ->
-    case lists:member(A, T) of
-        true -> remove_duplicates(T);
-        false -> [A | remove_duplicates(T)]
-    end.
 
 list_no_dupls(T) ->
     ?LET(L, (list(T)), (remove_duplicates(L))).
