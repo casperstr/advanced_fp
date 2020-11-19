@@ -1,10 +1,11 @@
-%% File: hello.erl
 -module(perm).
-
--export([perm/2]).
 
 -include_lib("proper/include/proper.hrl").
 -include_lib("eunit/include/eunit.hrl").
+
+-export([perm/2]).
+
+
 
 perm(Inp, Out) ->
     isStackPermutation(lists:reverse(Inp),
@@ -75,7 +76,7 @@ contains_231(Arr) ->
 prop_same_input_same_output() ->
     ?FORALL(L, (orderedlist(pos_integer())), (perm(L, L))).
 
-prop_same_input_same_output_test() ->
+same_input_same_output_test() ->
     ?assertEqual(true,
                  (proper:quickcheck(prop_same_input_same_output(),
                                     [{to_file, user}]))).
@@ -84,7 +85,7 @@ prop_231_false() ->
     ?FORALL(L, (list_no_dupls_inserted_231(pos_integer())),
             (false == perm(lists:sort(L), L))).
 
-prop_231_false_test() ->
+false_231_test() ->
     ?assertEqual(true,
                  (proper:quickcheck(prop_231_false(),
                                     [{to_file, user}]))).
@@ -93,8 +94,7 @@ prop_231_avoiding_true() ->
     ?FORALL(L, (list_no_dupls(pos_integer())),
             (?IMPLIES((contains_231(L) == false),
                       (true == perm(lists:sort(L), L))))).
-
-prop_231_avoiding_true_test() ->
+avoiding_231_true_test() ->
     ?assertEqual(true,
                  (proper:quickcheck(prop_231_avoiding_true(),
                                     [{to_file, user}]))).
