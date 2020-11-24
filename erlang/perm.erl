@@ -103,7 +103,7 @@ perm_basic_231_pattern_should_return_false_test() ->
     false = perm([1, 2, 3, 4, 5, 6], [1, 2, 4, 5, 3, 6]),
     false = perm([1, 2, 3, 4, 5, 6], [2, 3, 1, 4, 5, 6]),
     false = perm([1, 2, 3, 4, 5, 6], [2, 5, 6, 3, 4, 1]),
-    false = perm([1, 2, 3, 4, 5, 6], [5, 1, 2, 4, 6, 3]),
+    false = c
     ok.
 
 perm_basic_test() ->
