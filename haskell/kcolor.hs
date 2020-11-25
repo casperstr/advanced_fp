@@ -1,15 +1,16 @@
 -- \/\/\/ DO NOT MODIFY THE FOLLOWING LINE \/\/\/
-
+module Kcolor where 
 import Control.Monad (replicateM)
 -- see https://hackage.haskell.org/package/QuickCheck for
 -- documentation if you want to write your own tests
 
 import Data.Either
-import Data.List
+import Data.List (find, findIndex, nub, sort )
 import qualified Data.Set as Sets
 import qualified Maybes as Data.Maybe
 import Test.QuickCheck
 import Test.QuickCheck.Monadic
+import Data.Char
 
 data Vertex a = Vertex {label :: a, adjacent :: Sets.Set a}
   deriving (Show, Eq)
@@ -62,30 +63,37 @@ isSafeNode graph label color colors =
 isSafeGraph :: Ord a => Graph a -> Colors -> Bool
 isSafeGraph g@(Graph vertices) colors =
   let vertWithColors = zip vertices colors
-   in all (\(v, c) -> isSafeNode g (Main.label v) c colors) vertWithColors
+   in all (\(v, c) -> isSafeNode g (Kcolor.label v) c colors) vertWithColors
 
 allColors :: Int -> Int -> [[Int]]
 allColors numColors numNodes = replicateM numNodes [1 .. numColors]
 
-kcolor :: Ord a => Graph a -> Int -> Maybe [(a, Color)]
-kcolor g numColors = do 
+parseGraph :: [(Int, [Int])] -> Graph Int
+parseGraph inp = 
+  let graph = foldl addVertex empty (map fst inp)
+      neighbors = concatMap (\(n,adj) -> map (\(a) -> (n,a)) adj ) inp
+  in foldl addEdge graph neighbors
+kcolor :: [(Int, [Int])] -> Int -> Maybe [(Int, Char)]
+kcolor inp numColors = do 
+    let g = parseGraph inp
     let vs = vertices g
     let numNodes = length $ vs
     let colors = allColors numColors numNodes
     colorCombination <- find (isSafeGraph g) colors
-    Just(zip vs colorCombination)
+    let charColors = map (\c -> chr (ord 'a' + c)) colorCombination
+    Just(zip vs charColors)
     
 
 newtype GraphGenerator a = GraphGenerator [Either a (a, a)]
   deriving (Show)
-
+    
 instance (Arbitrary a, Ord a) => Arbitrary (GraphGenerator a) where
   arbitrary =
     sized arbitrarySizedGraphBuilder 
 
 generateItems :: Ord a => [a] -> [a] -> [(a, a)] -> Gen [Either a (a, a)]
 generateItems _ labels [] = return $ map Left labels
-generateItems _ [] es = return $ map Right es
+generateItems _ [] es = return $ map Right es   
 generateItems addedVertecies labels es = do
   let addableEdges = filter (\(u, v) -> elem u addedVertecies && elem v addedVertecies) es
   x <- elements (map Left labels ++ map Right addableEdges)
@@ -139,7 +147,7 @@ prop_ColorsValid gb = do
           vc
   return (isSafeGraph g colors == safe)
 
-main = do
+test = do
   putStrLn "prop_VerteciesAdded 1:"
   quickCheck prop_VerteciesAdded
   putStrLn "prop_NColorsValid 2:"
