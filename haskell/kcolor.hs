@@ -73,6 +73,7 @@ parseGraph inp =
   let graph = foldl addVertex empty (map fst inp)
       neighbors = concatMap (\(n,adj) -> map (\(a) -> (n,a)) adj ) inp
   in foldl addEdge graph neighbors
+  
 kcolor :: [(Int, [Int])] -> Int -> Maybe [(Int, Char)]
 kcolor inp numColors = do 
     let g = parseGraph inp
