@@ -14,5 +14,3 @@
   ])
 
 (define (perm inp out) (isStackPermutation (reverse inp) (reverse out) '()))
-
-(write (perm '(1 2 3) '(1 2 3)))
