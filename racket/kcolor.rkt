@@ -1,8 +1,7 @@
 #lang racket
 (provide (all-defined-out))
-
-
-
+(require rackunit)
+(require rackunit/text-ui)
 
 (define (neighbors graph label) 
     (second (findf (lambda (node) (equal? (first node) label)) graph))       
@@ -29,17 +28,128 @@
 (define (n-colors n) 
 (if (= n 0) '() (cons n (n-colors (- n 1)) )))
 
-(define (all-colors graph-size num-colors)  (combinations (n-colors num-colors) graph-size))
+(define (all-colors graph-size num-colors)  
+    (combinations 
+        (n-colors num-colors) 
+        graph-size
+    )
+)
 
 (define (find-safe-color graph num-colors) 
-    (findf (lambda (colorset) (is-safe-graph graph colorset)) (all-colors (length graph) num-colors))
+    (findf 
+        (λ(colorset) 
+            (is-safe-graph graph colorset)
+        ) 
+        (all-colors (length graph) num-colors))
 )
 
 (define (k-color graph numOfColors) 
     (let ([color (find-safe-color graph numOfColors)]) 
-    (if color 
-        (map (lambda(node color) (list (first node) (string (integer->char (+ 96 color))))) graph color) 
-        #f)
+        (if color 
+            (map 
+                (λ(node color) 
+                    (list 
+                        (first node) 
+                        (string (integer->char (+ 96 color)))
+                    )
+                ) 
+                graph 
+                color
+            ) 
+            #f
+        )
     )  
 )
-(k-color '((1 (2 3)) (2 (1 3)) (3 (1 2))) 3)
+
+(define (fully-connected-graph n) 
+    (map 
+        (λ(v) 
+            (list v 
+                (remove v 
+                    (build-list n values)
+                )
+            )
+        ) 
+        (build-list n values)
+    )
+)
+
+(define (nun-fully-connected-graph n degree) 
+    (map 
+        (λ(v) 
+            (list v 
+                (take
+                    (remove v 
+                        (build-list n values)
+                    )
+                    degree
+                )
+            )
+        ) 
+        (build-list n values)
+    )
+)
+
+(define (valid-answer res graph)
+    (andmap 
+        (lambda (x) 
+            (not 
+                (member
+                    (last x) 
+                    (map 
+                        (lambda (neighborLabel) 
+                            (last 
+                                (findf 
+                                    (lambda (node) (equal? (first node) neighborLabel))
+                                    res
+                                )
+                            )
+                        )
+                        (neighbors graph (first x))
+                    )
+                )
+            )
+            
+        )
+        res
+    )
+)
+
+(define tests
+    (test-suite "Tests" 
+        (test-case "No answers for fully connected graphs with to few colors"
+            (check-equal? (k-color '((1 (2 3)) (2 (1 3)) (3 (1 2))) 2) #f)
+            (let ([numOfEdges '(3 4 5 6 7)]) 
+                (for-each 
+                    (lambda (n) 
+                        (check-equal? 
+                            (k-color 
+                                (fully-connected-graph n) 
+                                (- n 1)
+                            ) 
+                            #f
+                        )
+                    ) 
+                numOfEdges)
+            )
+
+        )
+        (test-case "Valid answers when we got enough colors"
+            (let ([degree '(3 4 5 6 7)])
+                (for-each
+                    (lambda (d) 
+                        (check-equal?
+                            (let ([graph (nun-fully-connected-graph 10 d)])
+                                (valid-answer (k-color graph (+ d 1)) graph)
+                            )
+                            #t
+                        )
+                    )
+                    degree
+                )
+            )
+        )
+    )
+)
+
+(run-tests tests)
