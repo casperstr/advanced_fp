@@ -1,7 +1,6 @@
 #lang racket
 (provide (all-defined-out))
 (require rackunit)
-(require rackunit/text-ui)
 
 (define (neighbors graph label) 
     (second (findf (lambda (node) (equal? (first node) label)) graph))       
@@ -43,7 +42,7 @@
         (all-colors (length graph) num-colors))
 )
 
-(define (k-color graph numOfColors) 
+(define (kcolor graph numOfColors) 
     (let ([color (find-safe-color graph numOfColors)]) 
         (if color 
             (map 
@@ -104,7 +103,7 @@
                                     res
                                 )
                             )
-                        )
+                         )
                         (neighbors graph (first x))
                     )
                 )
@@ -118,12 +117,12 @@
 (define tests
     (test-suite "Tests" 
         (test-case "No answers for fully connected graphs with to few colors"
-            (check-equal? (k-color '((1 (2 3)) (2 (1 3)) (3 (1 2))) 2) #f)
+            (check-equal? (kcolor '((1 (2 3)) (2 (1 3)) (3 (1 2))) 2) #f)
             (let ([numOfEdges '(3 4 5 6 7)]) 
                 (for-each 
                     (lambda (n) 
                         (check-equal? 
-                            (k-color 
+                            (kcolor 
                                 (fully-connected-graph n) 
                                 (- n 1)
                             ) 
@@ -140,7 +139,7 @@
                     (lambda (d) 
                         (check-equal?
                             (let ([graph (nun-fully-connected-graph 10 d)])
-                                (valid-answer (k-color graph (+ d 1)) graph)
+                                (valid-answer (kcolor graph (+ d 1)) graph)
                             )
                             #t
                         )
@@ -151,5 +150,3 @@
         )
     )
 )
-
-(run-tests tests)

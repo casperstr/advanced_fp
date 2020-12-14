@@ -12,12 +12,11 @@ instance Show IntExpr where
 instance Show NormOp where
   show NormOne = "norm_one"
   show NormInf = "norm_inf"
-
 instance Show ScalarOp where
   show Mul = "mul"
   show Div = "div"
 
-instance Show VectorOp whereT
-  show Add = "'add"
+instance Show VectorOp where
+  show Add = "add"
   show Sub = "sub"
   show Dot = "dot"
