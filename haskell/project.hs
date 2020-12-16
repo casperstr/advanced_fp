@@ -2,14 +2,28 @@ import Control.Exception
 import Control.Monad
 import Data.List
 import Data.Maybe
+import Debug.Trace
 
 data Cell = X | O | Empty
-  deriving (Show, Eq)
+  deriving (Eq)
+
+instance Show Cell where
+  show X = "X"
+  show O = "O"
+  show Empty = "."
 
 data WrongColumnException = WrongColumnException
   deriving (Show)
 
 instance Exception WrongColumnException
+
+equalCellNotConsideringEmpty :: (Cell, Cell) -> Bool
+equalCellNotConsideringEmpty (Empty, _) = True
+equalCellNotConsideringEmpty (_, Empty) = True
+equalCellNotConsideringEmpty (a, b) = a == b
+
+equalRowCellNotConsideringEmpty :: [Cell] -> [Cell] -> Bool
+equalRowCellNotConsideringEmpty rowa rowb = all equalCellNotConsideringEmpty (zip rowa rowb)
 
 verifyTriples :: [Cell] -> Bool
 verifyTriples [] = True
@@ -47,14 +61,17 @@ opposite X = O
 opposite O = X
 opposite Empty = Empty
 
+countCellTypes :: [Cell] -> (Int, Int)
+countCellTypes row = ((length . filter (== X)) row, (length . filter (== O)) row)
+
 fillTriplesHeuristic :: [Cell] -> [Cell]
 fillTriplesHeuristic [] = []
 fillTriplesHeuristic [a] = [a]
 fillTriplesHeuristic [a, b] = [a, b]
 fillTriplesHeuristic (a : b : c : rest)
-  | a == b =
+  | a /= Empty && a == b =
     a : fillTriplesHeuristic (b : opposite a : rest)
-  | b == c =
+  | b /= Empty && b == c =
     opposite b : fillTriplesHeuristic (b : c : rest)
   | b == Empty && a == c =
     a : fillTriplesHeuristic (opposite a : c : rest)
@@ -66,17 +83,34 @@ fillCompleteRowHeuristic row
   | os == maxLength = fillWith X row
   | otherwise = row
   where
-    (xs, os) = ((length . filter (== X)) row, (length . filter (== O)) row)
+    (xs, os) = countCellTypes row
     maxLength = length row `div` 2
     fillWith cellType = map (\cell -> if cell == Empty then cellType else cell)
 
-fillHeuristic = fillTriplesHeuristic . fillCompleteRowHeuristic
+tryRemainingPlaces :: Cell -> [Cell] -> [[Cell]]
+tryRemainingPlaces cellType row = map genRow emptyIndicies
+  where
+    emptyIndicies = elemIndices Empty row
+    genRow index =
+      let (left, right) = splitAt index row
+       in left ++ [cellType] ++ tail right
+
+fillTripple3Heuristic :: [Cell] -> [Cell]
+fillTripple3Heuristic row
+  | xs - 1 == maxLength = fromMaybe row $ find verifyTriples $ map fillCompleteRowHeuristic $ tryRemainingPlaces X row
+  | os - 1 == maxLength = fromMaybe row $ find verifyTriples $ map fillCompleteRowHeuristic $ tryRemainingPlaces O row
+  | otherwise = row
+  where
+    (xs, os) = countCellTypes row
+    maxLength = length row `div` 2
+
+fillHeuristic = fillTriplesHeuristic . fillCompleteRowHeuristic . fillTripple3Heuristic
 
 solveAllHeuristics :: [[Cell]] -> [[Cell]]
 solveAllHeuristics board =
   let solvedRows = map fillHeuristic board
-      solvedColumns = transpose (map fillHeuristic (transpose solvedRows))
-   in if solvedColumns == board then board else solveAllHeuristics solvedColumns
+      finalBoard = transpose (map fillHeuristic (transpose solvedRows))
+   in if finalBoard == board then finalBoard else solveAllHeuristics finalBoard
 
 replaceFirstEmpty :: Cell -> [[Cell]] -> [[Cell]]
 replaceFirstEmpty _ [] = []
@@ -88,20 +122,23 @@ replaceFirstRowEmpty :: Cell -> [Cell] -> [Cell]
 replaceFirstRowEmpty _ [] = []
 replaceFirstRowEmpty cell (x : xs) = if x == Empty then cell : xs else x : replaceFirstRowEmpty cell xs
 
+solverAux :: [[Cell]] -> Maybe [[Cell]]
+solverAux board
+  | boardIsDone board && verifyBoard board && verifyUniqueness board = Just board
+  | boardIsDone board = Nothing
+  | verifyBoard board =
+    listToMaybe $
+      catMaybes
+        [ solve (replaceFirstEmpty O board),
+          solve (replaceFirstEmpty X board)
+        ]
+  | otherwise = Nothing
+
 solve :: [[Cell]] -> Maybe [[Cell]]
 solve board
   | boardIsDone board && verifyBoard board && verifyUniqueness board = Just board
   | boardIsDone board = Nothing
-  | verifyBoard board =
-    let b = solveAllHeuristics board
-     in if boardIsDone b && verifyBoard b && verifyUniqueness b
-          then Just b
-          else
-            listToMaybe $
-              catMaybes
-                [ solve (replaceFirstEmpty O board),
-                  solve (replaceFirstEmpty X board)
-                ]
+  | verifyBoard board = solverAux $ solveAllHeuristics board
   | otherwise = Nothing
 
 parseSettings :: String -> (Int, Int)
