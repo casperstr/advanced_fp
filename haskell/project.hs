@@ -127,11 +127,12 @@ solverAux board
   | boardIsDone board && verifyBoard board && verifyUniqueness board = Just board
   | boardIsDone board = Nothing
   | verifyBoard board =
-    listToMaybe $
-      catMaybes
-        [ solve (replaceFirstEmpty O board),
-          solve (replaceFirstEmpty X board)
-        ]
+    trace (show board ++ "\n") $
+      listToMaybe $
+        catMaybes
+          [ solve (replaceFirstEmpty O board),
+            solve (replaceFirstEmpty X board)
+          ]
   | otherwise = Nothing
 
 solve :: [[Cell]] -> Maybe [[Cell]]
