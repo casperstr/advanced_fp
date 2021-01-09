@@ -2,20 +2,29 @@
 
 -- \/\/\/ DO NOT MODIFY THE FOLLOWING LINE \/\/\/
 module Kcolor where
-
 import Control.Monad (replicateM)
 import Data.Char
 import Data.Either
-import Data.List (find, findIndex, nub, sort)
+import Data.List (sortBy, find, findIndex, nub, sort)
 import qualified Data.Set as Sets
 import qualified Maybes as Data.Maybe
+import System.Process
 import Test.QuickCheck
+import Test.QuickCheck.Monadic
+import GHC.Base (join)
 
 data Vertex a = Vertex {label :: a, adjacent :: Sets.Set a}
   deriving (Show, Eq)
 
 data Graph a = Graph [Vertex a]
   deriving (Show, Eq)
+
+
+printVertex :: Show a => Vertex a -> String
+printVertex vert = "(" ++ show (Kcolor.label vert) ++ " (" ++ join (map (\x -> show x  ++ " ") (Sets.toList (adjacent vert))) ++ "))"
+
+printGraph :: Show a => Graph a -> String
+printGraph (Graph vertexes) = join (map (\x -> printVertex(x) ++ " ") vertexes)
 
 empty :: Graph a
 empty = Graph []
@@ -81,6 +90,16 @@ colorGraph g numColors = do
   colorCombination <- find (isSafeGraph g) colors
   let charColors = map (\c -> chr (ord 'a' + c)) colorCombination
   return (zip vs charColors)
+
+
+printColoredPair :: (Int, Char) -> String 
+printColoredPair (a,b) = "(" ++ show a ++ "" ++ show b ++ ")"
+
+printColoredGraph :: Maybe [(Int, Char)] -> String
+printColoredGraph Nothing  = "#f"
+printColoredGraph (Just vertexes) = join $ map printColoredPair (sortBy (\(a,_) (b,_) -> compare a b) vertexes) 
+
+
 
 kcolor :: [(Int, [Int])] -> Int -> Maybe [(Int, Char)]
 kcolor inp = colorGraph (parseGraph inp)
@@ -172,6 +191,18 @@ prop_ColorsValid gb = do
           vc
   return (isSafeGraph g colors == safe)
 
+isSame :: String -> IO String
+isSame  = readProcess "../racket/kcolor" [] 
+  
+  
+
+prop_IsSameAsRacket :: GraphGenerator Int -> Property
+prop_IsSameAsRacket g = monadicIO  $ 
+  do
+    let graph = buildGraph g
+    res <- run (isSame ("(kcolor '(" ++ printGraph graph ++ ") 4)"))
+    assert ((take 2 res == "#f") == ("#f" == printColoredGraph (colorGraph graph 4)))
+
 test = do
   putStrLn "prop_VerteciesAdded"
   quickCheck prop_VerteciesAdded
@@ -183,3 +214,5 @@ test = do
   quickCheck prop_ColorsValid
   putStrLn "prop_MaxNumberColorHonored"
   quickCheck prop_MaxNumberColorHonored
+  putStrLn "as"
+  quickCheck prop_IsSameAsRacket

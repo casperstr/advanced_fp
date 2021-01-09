@@ -1,6 +1,9 @@
 #lang racket
 (provide (all-defined-out))
 (require rackunit)
+(define-namespace-anchor a)
+(define ns (namespace-anchor->namespace a))
+ 
 
 (define (neighbors graph label) 
     (second (findf (lambda (node) (equal? (first node) label)) graph))       
@@ -59,6 +62,9 @@
         )
     )  
 )
+
+
+(println (eval (read) ns))
 
 (define (fully-connected-graph n) 
     (map 
@@ -132,6 +138,9 @@
                 numOfEdges)
             )
 
+        )
+        (test-case "Failing haskell test"
+            (check-not-equal? (kcolor '((-8 (-7 -4 -3 9 )) (-4 (-8 -7 5 )) (-7 (-8 -4 5 9 )) (9 (-8 -7 -3 5 )) (-3 (-8 5 9 )) (5 (-7 -4 -3 9 ))) 5) #f)
         )
         (test-case "Valid answers when we got enough colors"
             (let ([degree '(3 4 5 6 7)])

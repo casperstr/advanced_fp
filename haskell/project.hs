@@ -3,7 +3,8 @@ import Control.Monad
 import Data.List
 import Data.Maybe
 import Debug.Trace
-
+import Control.Concurrent
+import GHC.Conc (pseq, par)
 data Cell = X | O | Empty
   deriving (Eq)
 
@@ -126,13 +127,10 @@ solverAux :: [[Cell]] -> Maybe [[Cell]]
 solverAux board
   | boardIsDone board && verifyBoard board && verifyUniqueness board = Just board
   | boardIsDone board = Nothing
-  | verifyBoard board =
-    trace (show board ++ "\n") $
-      listToMaybe $
-        catMaybes
-          [ solve (replaceFirstEmpty O board),
-            solve (replaceFirstEmpty X board)
-          ]
+  | verifyBoard board =  
+      let a = solve (replaceFirstEmpty O board)
+          b = solve (replaceFirstEmpty X board)
+      in if par b $ isJust a then a else b
   | otherwise = Nothing
 
 solve :: [[Cell]] -> Maybe [[Cell]]
